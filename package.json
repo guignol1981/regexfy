@@ -1,0 +1,11 @@
+{
+    "name": "regexfy",
+    "version": "1.0.2",
+    "description": "generate javascript regex with a builder",
+    "main": "app.ts",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC"
+}
