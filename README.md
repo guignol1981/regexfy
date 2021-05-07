@@ -1,11 +1,12 @@
 # regexfy
 
-### installation 
+### installation
 
 npm i regexfy
 
 ### example
 
+```
 const emailRegex = new RegexBuilder({ startStrict: true })
     .startGroup({
         occurence: RegexGroupBuilderOccurences.ONE_OR_MORE,
@@ -20,6 +21,12 @@ const emailRegex = new RegexBuilder({ startStrict: true })
     .notIn(RegexBuilderEscapedCharacters.WHITE_SPACE, '@')
     .endGroup()
     .end({ strict: true });
+
+console.log(emailRegex);
+console.log(emailRegex.test('test@test.com'));
+console.log(emailRegex.test('www.google.ca.'));
+
+```
 
 console.log(emailRegex);
 console.log(emailRegex.test('test@test.com')); // true
