@@ -23,11 +23,7 @@ const emailRegex = new RegexBuilder({ startStrict: true })
     .end({ strict: true });
 
 console.log(emailRegex);
-console.log(emailRegex.test('test@test.com'));
-console.log(emailRegex.test('www.google.ca.'));
+console.log(emailRegex.test('test@test.com'));  // true
+console.log(emailRegex.test('www.google.ca.')); // false
 
 ```
-
-console.log(emailRegex);
-console.log(emailRegex.test('test@test.com')); // true
-console.log(emailRegex.test('test@test@com')); //false
