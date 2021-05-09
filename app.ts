@@ -1,4 +1,4 @@
-export enum RegexGroupBuilderOccurences {
+export enum RGFYRegularOccurences {
     ZERO_OR_MORE = '*',
     ONE_OR_MORE = '+',
     ZERO_OR_ONE = '?',
@@ -14,155 +14,236 @@ export enum RegexBuilderEscapedCharacters {
     CARRIAGE_RETURN = '\\r',
 }
 
-export interface RegexGroupBuilderOptions {
-    occurence?: RegexGroupBuilderOccurences;
-    occurenceCount?: number | { min: number; max?: number };
-    ref?: string;
+export interface RGFYOccurenceBound {
+    min?: number;
+    max?: number;
+    exact?: number;
 }
 
-export class RegexGroupBuilder {
+export interface RGFYGroupBuilderOptions {
+    occurence?: RGFYRegularOccurences | RGFYOccurenceBound;
+    ref?: string;
+    backRef?: string;
+    or?: boolean;
+}
+
+export interface RGFYGroupParent {
+    regexp?: string;
+    ref?: string;
+    backRef?: string;
+    or?: boolean;
+    occurence: RGFYRegularOccurences | RGFYOccurenceBound;
+    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    endGroup(): RGFYGroupParent;
+    end(options?: { strict?: boolean }): RegExp;
+}
+
+export class RGFYGroupBuilder implements RGFYGroupParent {
     public regexp: string = '';
+    public readonly ref: string;
     public backRef: string = '';
-    public meOrNext: boolean = false;
+    public readonly or: boolean = false;
+    public readonly occurence: RGFYRegularOccurences | RGFYOccurenceBound;
+    private groupParents: (RGFYGroupParent & RGFYGroupBuilder)[] = [];
 
     public constructor(
-        private regexBuilder: RegexBuilder,
-        public readonly options: RegexGroupBuilderOptions
-    ) {}
+        private groupParent: RGFYGroupParent,
+        private groupOffset: number = 0,
+        options: RGFYGroupBuilderOptions
+    ) {
+        this.ref = options.ref!;
+        this.backRef = options.backRef ?? '';
+        this.or = !!options.or;
+        this.occurence = options.occurence || { exact: 1 };
+    }
 
-    public word(): RegexGroupBuilder {
-        this.regexp += `\\w`;
+    public startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder {
+        this.groupParents.push(
+            new RGFYGroupBuilder(
+                this,
+                this.groupOffset + this.groupParents.length + 1,
+                {
+                    ...{
+                        ref: (this.groupParents.length - 1).toString(),
+                    },
+                    ...(options ?? {}),
+                }
+            )
+        );
+
+        return this.groupParents[this.groupParents.length - 1];
+    }
+
+    public expression(
+        expression: string,
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += expression + parseOccurence(occurence);
         return this;
     }
 
-    public notWord(): RegexGroupBuilder {
-        this.regexp += `\\W`;
+    public word(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += `\\w` + parseOccurence(occurence);
         return this;
     }
 
-    public digit(): RegexGroupBuilder {
-        this.regexp += `\\d`;
+    public notWord(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += `\\W` + parseOccurence(occurence);
         return this;
     }
 
-    public notDigit(): RegexGroupBuilder {
-        this.regexp += `\\D`;
+    public digit(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += `\\d` + parseOccurence(occurence);
         return this;
     }
 
-    public whiteSpace(): RegexGroupBuilder {
-        this.regexp += `\\s`;
+    public notDigit(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += `\\D` + parseOccurence(occurence);
         return this;
     }
 
-    public notWhiteSpace(): RegexGroupBuilder {
-        this.regexp += `\\S`;
+    public whiteSpace(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += `\\s` + parseOccurence(occurence);
         return this;
     }
 
-    public anyOf(...candidates: string[]): RegexGroupBuilder {
+    public notWhiteSpace(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound = { exact: 1 }
+    ): RGFYGroupBuilder {
+        this.regexp += `\\S` + parseOccurence(occurence);
+        return this;
+    }
+
+    public anyOf(...candidates: string[]): RGFYGroupBuilder {
         this.regexp += `[${candidates.join(``)}]`;
         return this;
     }
 
-    public notIn(...excluded: string[]): RegexGroupBuilder {
+    public notIn(...excluded: string[]): RGFYGroupBuilder {
         this.regexp += `[^${excluded.join(``)}]`;
         return this;
     }
 
-    public backReference(ref: string): RegexGroupBuilder {
+    public backReference(ref: string): RGFYGroupBuilder {
         this.backRef = ref;
         return this;
     }
 
-    public charBetween(
-        lowerChar: string,
-        upperChar: string
-    ): RegexGroupBuilder {
+    public charBetween(lowerChar: string, upperChar: string): RGFYGroupBuilder {
         this.regexp += `[${lowerChar}-${upperChar}]`;
         return this;
     }
 
-    public endGroup(): RegexBuilder {
-        return this.regexBuilder;
+    public endGroup(): RGFYGroupParent {
+        this.regexp += getGroupParentsRegexp(
+            this.groupParents,
+            this.groupOffset
+        );
+        return this.groupParent;
+    }
+
+    public end(): RegExp {
+        throw 'do not use on children';
     }
 }
 
-export interface RegexBuilderOptions {
+export interface RGFYBuilderOptions {
     global?: boolean;
     caseInsensitive?: boolean;
     startStrict?: boolean;
 }
 
-export default class RegexBuilder {
-    private groupBuilders: RegexGroupBuilder[] = [];
+export default class RGFYRegexBuilder {
+    public regexp: string = '';
+    private groupParents: RGFYGroupBuilder[] = [];
+    public readonly occurence: RGFYOccurenceBound = { exact: 1 };
 
-    public constructor(private options: RegexBuilderOptions = {}) {}
+    public constructor(private readonly options: RGFYBuilderOptions = {}) {}
 
-    public startGroup(options?: RegexGroupBuilderOptions): RegexGroupBuilder {
-        this.groupBuilders.push(
-            new RegexGroupBuilder(this, {
+    public startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder {
+        this.groupParents.push(
+            new RGFYGroupBuilder(this, this.groupParents.length + 1, {
                 ...{
-                    ref: (this.groupBuilders.length - 1).toString(),
+                    ref: (this.groupParents.length - 1).toString(),
                 },
                 ...(options ?? {}),
             })
         );
 
-        return this.groupBuilders[this.groupBuilders.length - 1];
+        return this.groupParents[this.groupParents.length - 1];
     }
 
-    public or(): RegexBuilder {
-        this.groupBuilders[this.groupBuilders.length - 1].meOrNext = true;
-        return this;
+    public endGroup(): RGFYGroupParent {
+        throw 'Do not use on root builder';
     }
 
     public end(options: { strict?: boolean } = { strict: false }): RegExp {
-        let built: string = this.groupBuilders.reduce(
-            (acc, cur, _, a) => {
-                acc += `(`;
-                acc += cur.regexp;
+        if (this.options.startStrict) {
+            this.regexp += '^';
+        }
 
-                if (cur.backRef) {
-                    acc += `\\${
-                        a.map((a) => a.options.ref).indexOf(cur.backRef) + 1
-                    }`;
-                }
-
-                acc += cur.options.occurence ?? '';
-
-                acc += `)`;
-
-                if (cur.options.occurenceCount instanceof Object) {
-                    if ('min' in (cur.options.occurenceCount as any)) {
-                        if ('max' in (cur.options.occurenceCount as any)) {
-                            acc += `{${
-                                (cur.options.occurenceCount as any).min
-                            },${(cur.options.occurenceCount as any).max}}`;
-                        } else {
-                            acc += `{${
-                                (cur.options.occurenceCount as any).min
-                            },}`;
-                        }
-                    }
-                } else if (cur.options.occurenceCount) {
-                    acc += `{${cur.options.occurenceCount}}`;
-                }
-
-                if (cur.meOrNext) {
-                    acc += `|`;
-                }
-
-                return acc;
-            },
-            this.options.startStrict ? '^' : ''
-        );
+        this.regexp += getGroupParentsRegexp(this.groupParents, 0);
 
         return new RegExp(
-            (built += options.strict ? '$' : ''),
+            this.regexp + (options.strict ? '$' : ''),
             `${this.options.global ? 'g' : ''}${
                 this.options.caseInsensitive ? 'i' : ''
             }`
         );
     }
 }
+
+const parseOccurence = (
+    occurence: RGFYRegularOccurences | RGFYOccurenceBound
+): string => {
+    if (Object.values(RGFYRegularOccurences).includes(occurence as any)) {
+        return occurence as string;
+    }
+    const bound: RGFYOccurenceBound = occurence as RGFYOccurenceBound;
+
+    if ('min' in bound) {
+        if ('max' in bound) {
+            return `{${bound.min}, ${bound.max}}`;
+        }
+        return `{${bound.min},}`;
+    }
+
+    if ('exact' in bound) {
+        return `{${bound.exact}}`;
+    }
+
+    return '';
+};
+
+const getGroupParentsRegexp = (
+    groupParents: RGFYGroupParent[],
+    offset: number
+): string => {
+    return groupParents.reduce((acc, cur, _, a) => {
+        acc += `(`;
+        acc += cur.regexp;
+
+        if (cur.backRef) {
+            acc += `\\${a.map((a) => a.ref).indexOf(cur.backRef) + 1 + offset}`;
+        }
+
+        acc += `)`;
+
+        acc += parseOccurence(cur.occurence);
+        if (cur.or) {
+            acc += `|`;
+        }
+
+        return acc;
+    }, '');
+};

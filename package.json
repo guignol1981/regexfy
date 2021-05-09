@@ -4,8 +4,20 @@
     "description": "generate javascript regex with a builder",
     "main": "app.ts",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "start": "ts-node app.ts",
+        "build": "tsc",
+        "test": "jest"
     },
     "author": "",
-    "license": "ISC"
+    "license": "ISC",
+    "dependencies": {
+        "jest": "^26.6.3"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.14.0",
+        "@babel/preset-env": "^7.14.1",
+        "@babel/preset-typescript": "^7.13.0",
+        "@types/jest": "^26.0.23",
+        "babel-jest": "^26.6.3"
+    }
 }

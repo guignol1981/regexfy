@@ -11,13 +11,13 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RegexGroupBuilder = exports.RegexBuilderEscapedCharacters = exports.RegexGroupBuilderOccurences = void 0;
-var RegexGroupBuilderOccurences;
-(function (RegexGroupBuilderOccurences) {
-    RegexGroupBuilderOccurences["ZERO_OR_MORE"] = "*";
-    RegexGroupBuilderOccurences["ONE_OR_MORE"] = "+";
-    RegexGroupBuilderOccurences["ZERO_OR_ONE"] = "?";
-})(RegexGroupBuilderOccurences = exports.RegexGroupBuilderOccurences || (exports.RegexGroupBuilderOccurences = {}));
+exports.RGFYGroupBuilder = exports.RegexBuilderEscapedCharacters = exports.RGFYRegularOccurences = void 0;
+var RGFYRegularOccurences;
+(function (RGFYRegularOccurences) {
+    RGFYRegularOccurences["ZERO_OR_MORE"] = "*";
+    RGFYRegularOccurences["ONE_OR_MORE"] = "+";
+    RGFYRegularOccurences["ZERO_OR_ONE"] = "?";
+})(RGFYRegularOccurences = exports.RGFYRegularOccurences || (exports.RGFYRegularOccurences = {}));
 var RegexBuilderEscapedCharacters;
 (function (RegexBuilderEscapedCharacters) {
     RegexBuilderEscapedCharacters["DOT"] = "\\.";
@@ -28,39 +28,63 @@ var RegexBuilderEscapedCharacters;
     RegexBuilderEscapedCharacters["LINE_FEED"] = "\\n";
     RegexBuilderEscapedCharacters["CARRIAGE_RETURN"] = "\\r";
 })(RegexBuilderEscapedCharacters = exports.RegexBuilderEscapedCharacters || (exports.RegexBuilderEscapedCharacters = {}));
-var RegexGroupBuilder = /** @class */ (function () {
-    function RegexGroupBuilder(regexBuilder, options) {
-        this.regexBuilder = regexBuilder;
-        this.options = options;
+var RGFYGroupBuilder = /** @class */ (function () {
+    function RGFYGroupBuilder(groupParent, groupOffset, options) {
+        if (groupOffset === void 0) { groupOffset = 0; }
+        var _a;
+        this.groupParent = groupParent;
+        this.groupOffset = groupOffset;
         this.regexp = '';
         this.backRef = '';
-        this.meOrNext = false;
+        this.or = false;
+        this.groupParents = [];
+        this.ref = options.ref;
+        this.backRef = (_a = options.backRef) !== null && _a !== void 0 ? _a : '';
+        this.or = !!options.or;
+        this.occurence = options.occurence || { exact: 1 };
     }
-    RegexGroupBuilder.prototype.word = function () {
-        this.regexp += "\\w";
+    RGFYGroupBuilder.prototype.startGroup = function (options) {
+        this.groupParents.push(new RGFYGroupBuilder(this, this.groupOffset + this.groupParents.length + 1, __assign({
+            ref: (this.groupParents.length - 1).toString(),
+        }, (options !== null && options !== void 0 ? options : {}))));
+        return this.groupParents[this.groupParents.length - 1];
+    };
+    RGFYGroupBuilder.prototype.expression = function (expression, occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += expression + parseOccurence(occurence);
         return this;
     };
-    RegexGroupBuilder.prototype.notWord = function () {
-        this.regexp += "\\W";
+    RGFYGroupBuilder.prototype.word = function (occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += "\\w" + parseOccurence(occurence);
         return this;
     };
-    RegexGroupBuilder.prototype.digit = function () {
-        this.regexp += "\\d";
+    RGFYGroupBuilder.prototype.notWord = function (occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += "\\W" + parseOccurence(occurence);
         return this;
     };
-    RegexGroupBuilder.prototype.notDigit = function () {
-        this.regexp += "\\D";
+    RGFYGroupBuilder.prototype.digit = function (occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += "\\d" + parseOccurence(occurence);
         return this;
     };
-    RegexGroupBuilder.prototype.whiteSpace = function () {
-        this.regexp += "\\s";
+    RGFYGroupBuilder.prototype.notDigit = function (occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += "\\D" + parseOccurence(occurence);
         return this;
     };
-    RegexGroupBuilder.prototype.notWhiteSpace = function () {
-        this.regexp += "\\S";
+    RGFYGroupBuilder.prototype.whiteSpace = function (occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += "\\s" + parseOccurence(occurence);
         return this;
     };
-    RegexGroupBuilder.prototype.anyOf = function () {
+    RGFYGroupBuilder.prototype.notWhiteSpace = function (occurence) {
+        if (occurence === void 0) { occurence = { exact: 1 }; }
+        this.regexp += "\\S" + parseOccurence(occurence);
+        return this;
+    };
+    RGFYGroupBuilder.prototype.anyOf = function () {
         var candidates = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             candidates[_i] = arguments[_i];
@@ -68,7 +92,7 @@ var RegexGroupBuilder = /** @class */ (function () {
         this.regexp += "[" + candidates.join("") + "]";
         return this;
     };
-    RegexGroupBuilder.prototype.notIn = function () {
+    RGFYGroupBuilder.prototype.notIn = function () {
         var excluded = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             excluded[_i] = arguments[_i];
@@ -76,67 +100,80 @@ var RegexGroupBuilder = /** @class */ (function () {
         this.regexp += "[^" + excluded.join("") + "]";
         return this;
     };
-    RegexGroupBuilder.prototype.backReference = function (ref) {
+    RGFYGroupBuilder.prototype.backReference = function (ref) {
         this.backRef = ref;
         return this;
     };
-    RegexGroupBuilder.prototype.charBetween = function (lowerChar, upperChar) {
+    RGFYGroupBuilder.prototype.charBetween = function (lowerChar, upperChar) {
         this.regexp += "[" + lowerChar + "-" + upperChar + "]";
         return this;
     };
-    RegexGroupBuilder.prototype.endGroup = function () {
-        return this.regexBuilder;
+    RGFYGroupBuilder.prototype.endGroup = function () {
+        this.regexp += getGroupParentsRegexp(this.groupParents, this.groupOffset);
+        return this.groupParent;
     };
-    return RegexGroupBuilder;
+    RGFYGroupBuilder.prototype.end = function () {
+        throw 'do not use on children';
+    };
+    return RGFYGroupBuilder;
 }());
-exports.RegexGroupBuilder = RegexGroupBuilder;
-var RegexBuilder = /** @class */ (function () {
-    function RegexBuilder(options) {
+exports.RGFYGroupBuilder = RGFYGroupBuilder;
+var RGFYRegexBuilder = /** @class */ (function () {
+    function RGFYRegexBuilder(options) {
         if (options === void 0) { options = {}; }
         this.options = options;
-        this.groupBuilders = [];
+        this.regexp = '';
+        this.groupParents = [];
+        this.occurence = { exact: 1 };
     }
-    RegexBuilder.prototype.startGroup = function (options) {
-        this.groupBuilders.push(new RegexGroupBuilder(this, __assign({
-            ref: (this.groupBuilders.length - 1).toString(),
+    RGFYRegexBuilder.prototype.startGroup = function (options) {
+        this.groupParents.push(new RGFYGroupBuilder(this, this.groupParents.length + 1, __assign({
+            ref: (this.groupParents.length - 1).toString(),
         }, (options !== null && options !== void 0 ? options : {}))));
-        return this.groupBuilders[this.groupBuilders.length - 1];
+        return this.groupParents[this.groupParents.length - 1];
     };
-    RegexBuilder.prototype.or = function () {
-        this.groupBuilders[this.groupBuilders.length - 1].meOrNext = true;
-        return this;
+    RGFYRegexBuilder.prototype.endGroup = function () {
+        throw 'Do not use on root builder';
     };
-    RegexBuilder.prototype.end = function (options) {
+    RGFYRegexBuilder.prototype.end = function (options) {
         if (options === void 0) { options = { strict: false }; }
-        var built = this.groupBuilders.reduce(function (acc, cur, _, a) {
-            var _a;
-            acc += "(";
-            acc += cur.regexp;
-            if (cur.backRef) {
-                acc += "\\" + (a.map(function (a) { return a.options.ref; }).indexOf(cur.backRef) + 1);
-            }
-            acc += (_a = cur.options.occurence) !== null && _a !== void 0 ? _a : '';
-            acc += ")";
-            if (cur.options.occurenceCount instanceof Object) {
-                if ('min' in cur.options.occurenceCount) {
-                    if ('max' in cur.options.occurenceCount) {
-                        acc += "{" + cur.options.occurenceCount.min + "," + cur.options.occurenceCount.max + "}";
-                    }
-                    else {
-                        acc += "{" + cur.options.occurenceCount.min + ",}";
-                    }
-                }
-            }
-            else if (cur.options.occurenceCount) {
-                acc += "{" + cur.options.occurenceCount + "}";
-            }
-            if (cur.meOrNext) {
-                acc += "|";
-            }
-            return acc;
-        }, this.options.startStrict ? '^' : '');
-        return new RegExp((built += options.strict ? '$' : ''), "" + (this.options.global ? 'g' : '') + (this.options.caseInsensitive ? 'i' : ''));
+        if (this.options.startStrict) {
+            this.regexp += '^';
+        }
+        this.regexp += getGroupParentsRegexp(this.groupParents, 0);
+        return new RegExp(this.regexp + (options.strict ? '$' : ''), "" + (this.options.global ? 'g' : '') + (this.options.caseInsensitive ? 'i' : ''));
     };
-    return RegexBuilder;
+    return RGFYRegexBuilder;
 }());
-exports.default = RegexBuilder;
+exports.default = RGFYRegexBuilder;
+var parseOccurence = function (occurence) {
+    if (Object.values(RGFYRegularOccurences).includes(occurence)) {
+        return occurence;
+    }
+    var bound = occurence;
+    if ('min' in bound) {
+        if ('max' in bound) {
+            return "{" + bound.min + ", " + bound.max + "}";
+        }
+        return "{" + bound.min + ",}";
+    }
+    if ('exact' in bound) {
+        return "{" + bound.exact + "}";
+    }
+    return '';
+};
+var getGroupParentsRegexp = function (groupParents, offset) {
+    return groupParents.reduce(function (acc, cur, _, a) {
+        acc += "(";
+        acc += cur.regexp;
+        if (cur.backRef) {
+            acc += "\\" + (a.map(function (a) { return a.ref; }).indexOf(cur.backRef) + 1 + offset);
+        }
+        acc += ")";
+        acc += parseOccurence(cur.occurence);
+        if (cur.or) {
+            acc += "|";
+        }
+        return acc;
+    }, '');
+};

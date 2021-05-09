@@ -1,4 +1,4 @@
-export declare enum RegexGroupBuilderOccurences {
+export declare enum RGFYRegularOccurences {
     ZERO_OR_MORE = "*",
     ONE_OR_MORE = "+",
     ZERO_OR_ONE = "?"
@@ -12,44 +12,67 @@ export declare enum RegexBuilderEscapedCharacters {
     LINE_FEED = "\\n",
     CARRIAGE_RETURN = "\\r"
 }
-export interface RegexGroupBuilderOptions {
-    occurence?: RegexGroupBuilderOccurences;
-    occurenceCount?: number | {
-        min: number;
-        max?: number;
-    };
+export interface RGFYOccurenceBound {
+    min?: number;
+    max?: number;
+    exact?: number;
+}
+export interface RGFYGroupBuilderOptions {
+    occurence?: RGFYRegularOccurences | RGFYOccurenceBound;
     ref?: string;
+    backRef?: string;
+    or?: boolean;
 }
-export declare class RegexGroupBuilder {
-    private regexBuilder;
-    readonly options: RegexGroupBuilderOptions;
+export interface RGFYGroupParent {
+    regexp?: string;
+    ref?: string;
+    backRef?: string;
+    or?: boolean;
+    occurence: RGFYRegularOccurences | RGFYOccurenceBound;
+    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    endGroup(): RGFYGroupParent;
+    end(options?: {
+        strict?: boolean;
+    }): RegExp;
+}
+export declare class RGFYGroupBuilder implements RGFYGroupParent {
+    private groupParent;
+    private groupOffset;
     regexp: string;
+    readonly ref: string;
     backRef: string;
-    meOrNext: boolean;
-    constructor(regexBuilder: RegexBuilder, options: RegexGroupBuilderOptions);
-    word(): RegexGroupBuilder;
-    notWord(): RegexGroupBuilder;
-    digit(): RegexGroupBuilder;
-    notDigit(): RegexGroupBuilder;
-    whiteSpace(): RegexGroupBuilder;
-    notWhiteSpace(): RegexGroupBuilder;
-    anyOf(...candidates: string[]): RegexGroupBuilder;
-    notIn(...excluded: string[]): RegexGroupBuilder;
-    backReference(ref: string): RegexGroupBuilder;
-    charBetween(lowerChar: string, upperChar: string): RegexGroupBuilder;
-    endGroup(): RegexBuilder;
+    readonly or: boolean;
+    readonly occurence: RGFYRegularOccurences | RGFYOccurenceBound;
+    private groupParents;
+    constructor(groupParent: RGFYGroupParent, groupOffset: number, options: RGFYGroupBuilderOptions);
+    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    expression(expression: string, occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    word(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    notWord(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    digit(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    notDigit(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    whiteSpace(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    notWhiteSpace(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    anyOf(...candidates: string[]): RGFYGroupBuilder;
+    notIn(...excluded: string[]): RGFYGroupBuilder;
+    backReference(ref: string): RGFYGroupBuilder;
+    charBetween(lowerChar: string, upperChar: string): RGFYGroupBuilder;
+    endGroup(): RGFYGroupParent;
+    end(): RegExp;
 }
-export interface RegexBuilderOptions {
+export interface RGFYBuilderOptions {
     global?: boolean;
     caseInsensitive?: boolean;
     startStrict?: boolean;
 }
-export default class RegexBuilder {
-    private options;
-    private groupBuilders;
-    constructor(options?: RegexBuilderOptions);
-    startGroup(options?: RegexGroupBuilderOptions): RegexGroupBuilder;
-    or(): RegexBuilder;
+export default class RGFYRegexBuilder {
+    private readonly options;
+    regexp: string;
+    private groupParents;
+    readonly occurence: RGFYOccurenceBound;
+    constructor(options?: RGFYBuilderOptions);
+    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    endGroup(): RGFYGroupParent;
     end(options?: {
         strict?: boolean;
     }): RegExp;
