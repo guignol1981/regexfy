@@ -1,7 +1,4 @@
-import RGFYRegexBuilder, {
-    RegexBuilderEscapedCharacters,
-    RGFYGroupBuilder,
-} from './app';
+import RGFYRegexBuilder, { RegexBuilderEscapedCharacters } from './app';
 import RGFYregexpBuilder, { RGFYRegularOccurences } from './app';
 
 test('empty', () => {
@@ -118,8 +115,6 @@ describe('use cases', () => {
             .word(RGFYRegularOccurences.ONE_OR_MORE)
             .endGroup()
             .end({ strict: true });
-
-        console.log(regexp);
 
         expect(regexp.test('www.google.com')).toBe(true);
         expect(regexp.test('http://www.google.com')).toBe(true);
