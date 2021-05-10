@@ -7,7 +7,6 @@
 
 npm i regexfy
 
-
 ### example
 
 ```
