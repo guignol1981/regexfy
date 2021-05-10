@@ -140,4 +140,62 @@ describe('use cases', () => {
         expect(regexp.test('www.google.com.')).toBe(false);
         expect(regexp.test('www.google.com.')).toBe(false);
     });
+
+    test('first last name', () => {
+        const regexp = new RGFYBuilder({
+            startStrict: true,
+            caseInsensitive: false,
+        })
+            .startGroup()
+            .charBetween('A', 'Z')
+            .word(RGFYRegularOccurences.ONE_OR_MORE)
+            .endGroup()
+            .startGroup()
+            .expression(RGFYEscapedCharacters.WHITE_SPACE)
+            .endGroup()
+            .startGroup()
+            .charBetween('A', 'Z')
+            .word(RGFYRegularOccurences.ONE_OR_MORE)
+            .endGroup()
+            .end();
+
+        expect(regexp.test('John Doe')).toBe(true);
+        expect(regexp.test('JohnDoe')).toBe(false);
+        expect(regexp.test('John doe')).toBe(false);
+        expect(regexp.test('john Doe')).toBe(false);
+    });
+
+    test('postal code', () => {
+        const regexp = new RGFYBuilder({
+            startStrict: true,
+            caseInsensitive: false,
+        })
+            .startGroup()
+            .charBetween('A', 'Z')
+            .endGroup()
+            .startGroup()
+            .digit()
+            .endGroup()
+            .startGroup()
+            .charBetween('A', 'Z')
+            .endGroup()
+            .startGroup()
+            .expression(RGFYEscapedCharacters.WHITE_SPACE)
+            .endGroup()
+            .startGroup()
+            .digit()
+            .endGroup()
+            .startGroup()
+            .charBetween('A', 'Z')
+            .endGroup()
+            .startGroup()
+            .digit()
+            .endGroup()
+            .end({ strict: true });
+
+        expect(regexp.test('G1R 2L9')).toBe(true);
+        expect(regexp.test('G1R 229')).toBe(false);
+        expect(regexp.test('G1R2L9')).toBe(false);
+        expect(regexp.test('g1r 2l9')).toBe(false);
+    });
 });
