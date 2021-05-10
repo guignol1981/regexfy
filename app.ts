@@ -4,7 +4,7 @@ export enum RGFYRegularOccurences {
     ZERO_OR_ONE = '?',
 }
 
-export enum RegexBuilderEscapedCharacters {
+export enum RGFYEscapedCharacters {
     DOT = `\\.`,
     BACKSLASH = `\\`,
     STAR = `\*`,
@@ -23,8 +23,6 @@ export interface RGFYOccurenceBound {
 export interface RGFYGroupBuilderOptions {
     occurence?: RGFYRegularOccurences | RGFYOccurenceBound;
     ref?: string;
-    backRef?: string;
-    or?: boolean;
 }
 
 export interface RGFYGroupParent {
@@ -33,7 +31,16 @@ export interface RGFYGroupParent {
     backRef?: string;
     or?: boolean;
     occurence: RGFYRegularOccurences | RGFYOccurenceBound;
-    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    startGroup(): RGFYGroupBuilder;
+    startGroup(ref: string): RGFYGroupBuilder;
+    startGroup(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound
+    ): RGFYGroupBuilder;
+    startGroup(
+        ref: string,
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound
+    ): RGFYGroupBuilder;
+    startGroup(...args: any): RGFYGroupBuilder;
     endGroup(): RGFYGroupParent;
     end(options?: { strict?: boolean }): RegExp;
 }
@@ -42,7 +49,7 @@ export class RGFYGroupBuilder implements RGFYGroupParent {
     public regexp: string = '';
     public readonly ref: string;
     public backRef: string = '';
-    public readonly or: boolean = false;
+    public or: boolean = false;
     public readonly occurence: RGFYRegularOccurences | RGFYOccurenceBound;
     private groupParents: (RGFYGroupParent & RGFYGroupBuilder)[] = [];
 
@@ -52,26 +59,57 @@ export class RGFYGroupBuilder implements RGFYGroupParent {
         options: RGFYGroupBuilderOptions
     ) {
         this.ref = options.ref!;
-        this.backRef = options.backRef ?? '';
-        this.or = !!options.or;
         this.occurence = options.occurence || { exact: 1 };
     }
 
-    public startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder {
+    public startGroup(): RGFYGroupBuilder;
+    public startGroup(
+        ref: string,
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound
+    ): RGFYGroupBuilder;
+    public startGroup(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound
+    ): RGFYGroupBuilder;
+    public startGroup(ref: string): RGFYGroupBuilder;
+    public startGroup(...args: any[]): RGFYGroupBuilder {
+        const opts: RGFYGroupBuilderOptions = {};
+
+        if (args[0] && typeof args[0] === 'string') {
+            opts.ref = args[0];
+        } else if (
+            args[0] &&
+            Object.values(RGFYRegularOccurences).includes(args[0])
+        ) {
+            opts.occurence = args[0];
+        }
+
+        if (args[1] && Object.values(RGFYRegularOccurences).includes(args[1])) {
+            opts.occurence = args[1];
+        }
+
+        if (!opts.ref) {
+            opts.ref = (this.groupParents.length + 1).toString();
+        }
+
         this.groupParents.push(
             new RGFYGroupBuilder(
                 this,
                 this.groupOffset + this.groupParents.length + 1,
-                {
-                    ...{
-                        ref: (this.groupParents.length - 1).toString(),
-                    },
-                    ...(options ?? {}),
-                }
+                opts
             )
         );
 
         return this.groupParents[this.groupParents.length - 1];
+    }
+
+    public thisOneOrNextOne(): RGFYGroupBuilder {
+        this.or = true;
+        return this;
+    }
+
+    public backReference(ref: string): RGFYGroupBuilder {
+        this.backRef = ref;
+        return this;
     }
 
     public expression(
@@ -134,11 +172,6 @@ export class RGFYGroupBuilder implements RGFYGroupParent {
         return this;
     }
 
-    public backReference(ref: string): RGFYGroupBuilder {
-        this.backRef = ref;
-        return this;
-    }
-
     public charBetween(lowerChar: string, upperChar: string): RGFYGroupBuilder {
         this.regexp += `[${lowerChar}-${upperChar}]`;
         return this;
@@ -163,21 +196,41 @@ export interface RGFYBuilderOptions {
     startStrict?: boolean;
 }
 
-export default class RGFYRegexBuilder {
+export default class RGFYBuilder implements RGFYGroupParent {
     public regexp: string = '';
-    private groupParents: RGFYGroupBuilder[] = [];
+    private groupParents: (RGFYGroupParent & RGFYGroupBuilder)[] = [];
     public readonly occurence: RGFYOccurenceBound = { exact: 1 };
 
     public constructor(private readonly options: RGFYBuilderOptions = {}) {}
 
-    public startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder {
+    public startGroup(): RGFYGroupBuilder;
+    public startGroup(
+        ref: string,
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound
+    ): RGFYGroupBuilder;
+    public startGroup(
+        occurence: RGFYRegularOccurences | RGFYOccurenceBound
+    ): RGFYGroupBuilder;
+    public startGroup(ref: string): RGFYGroupBuilder;
+    public startGroup(...args: any[]): RGFYGroupBuilder {
+        const opts: RGFYGroupBuilderOptions = {};
+
+        if (args[0] && Object.values(RGFYRegularOccurences).includes(args[0])) {
+            opts.occurence = args[0];
+        } else if (args[0] && typeof args[0] === 'string') {
+            opts.ref = args[0];
+        }
+
+        if (args[1] && Object.values(RGFYRegularOccurences).includes(args[1])) {
+            opts.occurence = args[1];
+        }
+
+        if (!opts.ref) {
+            opts.ref = (this.groupParents.length + 1).toString();
+        }
+
         this.groupParents.push(
-            new RGFYGroupBuilder(this, this.groupParents.length + 1, {
-                ...{
-                    ref: (this.groupParents.length - 1).toString(),
-                },
-                ...(options ?? {}),
-            })
+            new RGFYGroupBuilder(this, this.groupParents.length + 1, opts)
         );
 
         return this.groupParents[this.groupParents.length - 1];

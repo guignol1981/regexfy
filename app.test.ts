@@ -1,18 +1,20 @@
-import RGFYRegexBuilder, { RegexBuilderEscapedCharacters } from './app';
-import RGFYregexpBuilder, { RGFYRegularOccurences } from './app';
+import RGFYBuilder, {
+    RGFYEscapedCharacters,
+    RGFYRegularOccurences,
+} from './app';
 
 test('empty', () => {
-    const regexp = new RGFYregexpBuilder().end();
+    const regexp = new RGFYBuilder().end();
     expect(regexp.test('')).toBe(true);
 });
 
 test('word', () => {
-    const regexp = new RGFYregexpBuilder().startGroup().word().endGroup().end();
+    const regexp = new RGFYBuilder().startGroup().word().endGroup().end();
     expect(regexp.test('word')).toBe(true);
 });
 
 test('any of', () => {
-    const regexp = new RGFYregexpBuilder()
+    const regexp = new RGFYBuilder()
         .startGroup()
         .anyOf('1', '2')
         .endGroup()
@@ -22,7 +24,7 @@ test('any of', () => {
 });
 
 test('not in', () => {
-    const regexp = new RGFYregexpBuilder()
+    const regexp = new RGFYBuilder()
         .startGroup()
         .notIn('1', '2')
         .endGroup()
@@ -31,9 +33,19 @@ test('not in', () => {
     expect(regexp.test('23')).toBe(true);
 });
 
+test('expression', () => {
+    const regexp = new RGFYBuilder({ startStrict: true })
+        .startGroup()
+        .expression('test')
+        .endGroup()
+        .end({ strict: true });
+
+    expect(regexp.test('test')).toBe(true);
+});
+
 test('back ref', () => {
-    const regexp = new RGFYregexpBuilder({ startStrict: true })
-        .startGroup({ ref: 'groupA' })
+    const regexp = new RGFYBuilder({ startStrict: true })
+        .startGroup('groupA', { exact: 1 })
         .word(RGFYRegularOccurences.ONE_OR_MORE)
         .endGroup()
         .startGroup()
@@ -48,43 +60,44 @@ test('back ref', () => {
 });
 
 test('child group', () => {
-    const regexp = new RGFYRegexBuilder({ startStrict: true })
-        .startGroup({ ref: 'ParentA' })
+    const regexp = new RGFYBuilder({ startStrict: true })
+        .startGroup('ParentA')
         .word({ exact: 4 })
-        .startGroup({ ref: 'childA' })
+        .startGroup('ChildA')
         .digit()
         .endGroup()
-        .startGroup({ backRef: 'childA' })
+        .startGroup()
+        .backReference('ChildA')
         .endGroup()
         .endGroup()
-        .startGroup({ backRef: 'ParentA' })
+        .startGroup()
+        .backReference('ParentA')
         .endGroup()
         .end({ strict: true });
 
     expect(regexp.test('test11test11')).toBe(true);
+    expect(regexp.test('test12test12')).toBe(false);
 });
 
 describe('use cases', () => {
     test('email', () => {
-        const regexp = new RGFYRegexBuilder({ startStrict: true })
-            .startGroup({
-                occurence: RGFYRegularOccurences.ONE_OR_MORE,
-                ref: 'groupA',
-            })
+        const regexp = new RGFYBuilder({ startStrict: true })
+            .startGroup(RGFYRegularOccurences.ZERO_OR_MORE)
             .word(RGFYRegularOccurences.ONE_OR_MORE)
-            .startGroup({ occurence: RGFYRegularOccurences.ZERO_OR_ONE })
-            .anyOf(RegexBuilderEscapedCharacters.DOT)
+            .expression(RGFYEscapedCharacters.DOT)
             .endGroup()
+            .startGroup()
+            .word(RGFYRegularOccurences.ONE_OR_MORE)
+            .expression('@')
+            .endGroup()
+            .startGroup(RGFYRegularOccurences.ZERO_OR_MORE)
+            .word(RGFYRegularOccurences.ONE_OR_MORE)
+            .expression(RGFYEscapedCharacters.DOT)
             .endGroup()
             .startGroup()
             .word(RGFYRegularOccurences.ONE_OR_MORE)
             .endGroup()
-            .startGroup()
-            .anyOf('@')
-            .endGroup()
-            .startGroup({ backRef: 'groupA' })
-            .endGroup()
-            .end();
+            .end({ strict: true });
 
         expect(regexp.test('test@test.com')).toBe(true);
         expect(regexp.test('test.@test.com')).toBe(false);
@@ -96,22 +109,21 @@ describe('use cases', () => {
     });
 
     test('website url', () => {
-        const regexp = new RGFYRegexBuilder({ startStrict: true })
-            .startGroup({ occurence: RGFYRegularOccurences.ZERO_OR_ONE })
-            .startGroup({ or: true })
+        const regexp = new RGFYBuilder({ startStrict: true })
+            .startGroup(RGFYRegularOccurences.ZERO_OR_ONE)
+            .startGroup()
+            .thisOneOrNextOne()
             .expression('http://')
             .endGroup()
             .startGroup()
             .expression('https://')
             .endGroup()
             .endGroup()
-            .startGroup({ occurence: RGFYRegularOccurences.ONE_OR_MORE })
+            .startGroup(RGFYRegularOccurences.ZERO_OR_MORE)
             .word(RGFYRegularOccurences.ONE_OR_MORE)
-            .startGroup({ occurence: { exact: 1 } })
-            .anyOf(RegexBuilderEscapedCharacters.DOT)
+            .expression(RGFYEscapedCharacters.DOT)
             .endGroup()
-            .endGroup()
-            .startGroup({ occurence: { exact: 1 } })
+            .startGroup()
             .word(RGFYRegularOccurences.ONE_OR_MORE)
             .endGroup()
             .end({ strict: true });
