@@ -66,3 +66,24 @@ npm i regexfy
         expect(regexp.test('htttps://com')).toBe(false);
         expect(regexp.test('www.google.com.')).toBe(false);
         expect(regexp.test('www.google.com.')).toBe(false);
+        
+### Full name
+
+       const regexp = new RGFYBuilder({
+            startStrict: true,
+            caseInsensitive: false,
+        })
+            .startGroup()
+            .charBetween('A', 'Z')
+            .word(RGFYRegularOccurences.ONE_OR_MORE)
+            .expression(RGFYEscapedCharacters.WHITE_SPACE)
+            .charBetween('A', 'Z')
+            .word(RGFYRegularOccurences.ONE_OR_MORE)
+            .endGroup()
+            .end();
+
+        expect(regexp.test('John Doe')).toBe(true);
+
+        expect(regexp.test('JohnDoe')).toBe(false);
+        expect(regexp.test('John doe')).toBe(false);
+        expect(regexp.test('john Doe')).toBe(false);
