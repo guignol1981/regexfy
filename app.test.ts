@@ -119,7 +119,7 @@ describe('use cases', () => {
             .expression('https://')
             .endGroup()
             .endGroup()
-            .startGroup(RGFYRegularOccurences.ZERO_OR_MORE)
+            .startGroup(RGFYRegularOccurences.ONE_OR_MORE)
             .word(RGFYRegularOccurences.ONE_OR_MORE)
             .expression(RGFYEscapedCharacters.DOT)
             .endGroup()
@@ -131,12 +131,13 @@ describe('use cases', () => {
         expect(regexp.test('www.google.com')).toBe(true);
         expect(regexp.test('http://www.google.com')).toBe(true);
         expect(regexp.test('https://www.google.com')).toBe(true);
+
         expect(regexp.test('htttps://www.google.com')).toBe(false);
-        expect(regexp.test('htttps://.com')).toBe(false);
-        expect(regexp.test('htttps://com.')).toBe(false);
-        expect(regexp.test('htttps://')).toBe(false);
-        expect(regexp.test('htttps://.')).toBe(false);
-        expect(regexp.test('htttps://com')).toBe(false);
+        expect(regexp.test('https://.com')).toBe(false);
+        expect(regexp.test('https://com.')).toBe(false);
+        expect(regexp.test('https://')).toBe(false);
+        expect(regexp.test('https://.')).toBe(false);
+        expect(regexp.test('https://com')).toBe(false);
         expect(regexp.test('www.google.com.')).toBe(false);
         expect(regexp.test('www.google.com.')).toBe(false);
     });
@@ -156,6 +157,7 @@ describe('use cases', () => {
             .end();
 
         expect(regexp.test('John Doe')).toBe(true);
+
         expect(regexp.test('JohnDoe')).toBe(false);
         expect(regexp.test('John doe')).toBe(false);
         expect(regexp.test('john Doe')).toBe(false);
@@ -178,6 +180,7 @@ describe('use cases', () => {
             .end({ strict: true });
 
         expect(regexp.test('G1R 2L9')).toBe(true);
+
         expect(regexp.test('G1R 229')).toBe(false);
         expect(regexp.test('G1R2L9')).toBe(false);
         expect(regexp.test('g1r 2l9')).toBe(false);
@@ -205,7 +208,7 @@ describe('use cases', () => {
             .endGroup()
             .startGroup()
             .thisOneOrNextOne()
-            .expression('.')
+            .expression(RGFYEscapedCharacters.DOT)
             .endGroup()
             .startGroup()
             .expression(RGFYEscapedCharacters.WHITE_SPACE)
