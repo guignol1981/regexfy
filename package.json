@@ -1,6 +1,6 @@
 {
     "name": "regexfy",
-    "version": "1.2.3",
+    "version": "1.2.4",
     "description": "JS Regexp with a builder",
     "main": "app.ts",
     "scripts": {
