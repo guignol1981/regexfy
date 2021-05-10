@@ -12,6 +12,8 @@ export enum RGFYEscapedCharacters {
     TAB = '\\t',
     LINE_FEED = '\\n',
     CARRIAGE_RETURN = '\\r',
+    OPEN_PARENTHESES = '\\(',
+    CLOSE_PARENTHESES = '\\)',
 }
 
 export interface RGFYOccurenceBound {
