@@ -9,6 +9,23 @@ npm i regexfy
 
 ### example
 
-check test file uses case for examples
+       const regexp = new RGFYBuilder({
+            startStrict: true,
+            caseInsensitive: false,
+        })
+            .startGroup()
+            .charBetween('A', 'Z')
+            .digit()
+            .charBetween('A', 'Z')
+            .expression(RGFYEscapedCharacters.WHITE_SPACE)
+            .digit()
+            .charBetween('A', 'Z')
+            .digit()
+            .endGroup()
+            .end({ strict: true });
 
-```
+        expect(regexp.test('G1R 2L9')).toBe(true);
+
+        expect(regexp.test('G1R 229')).toBe(false);
+        expect(regexp.test('G1R2L9')).toBe(false);
+        expect(regexp.test('g1r 2l9')).toBe(false);
