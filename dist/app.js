@@ -1,37 +1,25 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RGFYGroupBuilder = exports.RegexBuilderEscapedCharacters = exports.RGFYRegularOccurences = void 0;
+exports.RGFYGroupBuilder = exports.RGFYEscapedCharacters = exports.RGFYRegularOccurences = void 0;
 var RGFYRegularOccurences;
 (function (RGFYRegularOccurences) {
     RGFYRegularOccurences["ZERO_OR_MORE"] = "*";
     RGFYRegularOccurences["ONE_OR_MORE"] = "+";
     RGFYRegularOccurences["ZERO_OR_ONE"] = "?";
 })(RGFYRegularOccurences = exports.RGFYRegularOccurences || (exports.RGFYRegularOccurences = {}));
-var RegexBuilderEscapedCharacters;
-(function (RegexBuilderEscapedCharacters) {
-    RegexBuilderEscapedCharacters["DOT"] = "\\.";
-    RegexBuilderEscapedCharacters["BACKSLASH"] = "\\";
-    RegexBuilderEscapedCharacters["STAR"] = "*";
-    RegexBuilderEscapedCharacters["WHITE_SPACE"] = "\\s";
-    RegexBuilderEscapedCharacters["TAB"] = "\\t";
-    RegexBuilderEscapedCharacters["LINE_FEED"] = "\\n";
-    RegexBuilderEscapedCharacters["CARRIAGE_RETURN"] = "\\r";
-})(RegexBuilderEscapedCharacters = exports.RegexBuilderEscapedCharacters || (exports.RegexBuilderEscapedCharacters = {}));
+var RGFYEscapedCharacters;
+(function (RGFYEscapedCharacters) {
+    RGFYEscapedCharacters["DOT"] = "\\.";
+    RGFYEscapedCharacters["BACKSLASH"] = "\\";
+    RGFYEscapedCharacters["STAR"] = "*";
+    RGFYEscapedCharacters["WHITE_SPACE"] = "\\s";
+    RGFYEscapedCharacters["TAB"] = "\\t";
+    RGFYEscapedCharacters["LINE_FEED"] = "\\n";
+    RGFYEscapedCharacters["CARRIAGE_RETURN"] = "\\r";
+})(RGFYEscapedCharacters = exports.RGFYEscapedCharacters || (exports.RGFYEscapedCharacters = {}));
 var RGFYGroupBuilder = /** @class */ (function () {
     function RGFYGroupBuilder(groupParent, groupOffset, options) {
         if (groupOffset === void 0) { groupOffset = 0; }
-        var _a;
         this.groupParent = groupParent;
         this.groupOffset = groupOffset;
         this.regexp = '';
@@ -39,15 +27,37 @@ var RGFYGroupBuilder = /** @class */ (function () {
         this.or = false;
         this.groupParents = [];
         this.ref = options.ref;
-        this.backRef = (_a = options.backRef) !== null && _a !== void 0 ? _a : '';
-        this.or = !!options.or;
         this.occurence = options.occurence || { exact: 1 };
     }
-    RGFYGroupBuilder.prototype.startGroup = function (options) {
-        this.groupParents.push(new RGFYGroupBuilder(this, this.groupOffset + this.groupParents.length + 1, __assign({
-            ref: (this.groupParents.length - 1).toString(),
-        }, (options !== null && options !== void 0 ? options : {}))));
+    RGFYGroupBuilder.prototype.startGroup = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        var opts = {};
+        if (args[0] && typeof args[0] === 'string') {
+            opts.ref = args[0];
+        }
+        else if (args[0] &&
+            Object.values(RGFYRegularOccurences).includes(args[0])) {
+            opts.occurence = args[0];
+        }
+        if (args[1] && Object.values(RGFYRegularOccurences).includes(args[1])) {
+            opts.occurence = args[1];
+        }
+        if (!opts.ref) {
+            opts.ref = (this.groupParents.length + 1).toString();
+        }
+        this.groupParents.push(new RGFYGroupBuilder(this, this.groupOffset + this.groupParents.length + 1, opts));
         return this.groupParents[this.groupParents.length - 1];
+    };
+    RGFYGroupBuilder.prototype.thisOneOrNextOne = function () {
+        this.or = true;
+        return this;
+    };
+    RGFYGroupBuilder.prototype.backReference = function (ref) {
+        this.backRef = ref;
+        return this;
     };
     RGFYGroupBuilder.prototype.expression = function (expression, occurence) {
         if (occurence === void 0) { occurence = { exact: 1 }; }
@@ -100,10 +110,6 @@ var RGFYGroupBuilder = /** @class */ (function () {
         this.regexp += "[^" + excluded.join("") + "]";
         return this;
     };
-    RGFYGroupBuilder.prototype.backReference = function (ref) {
-        this.backRef = ref;
-        return this;
-    };
     RGFYGroupBuilder.prototype.charBetween = function (lowerChar, upperChar) {
         this.regexp += "[" + lowerChar + "-" + upperChar + "]";
         return this;
@@ -118,24 +124,39 @@ var RGFYGroupBuilder = /** @class */ (function () {
     return RGFYGroupBuilder;
 }());
 exports.RGFYGroupBuilder = RGFYGroupBuilder;
-var RGFYRegexBuilder = /** @class */ (function () {
-    function RGFYRegexBuilder(options) {
+var RGFYBuilder = /** @class */ (function () {
+    function RGFYBuilder(options) {
         if (options === void 0) { options = {}; }
         this.options = options;
         this.regexp = '';
         this.groupParents = [];
         this.occurence = { exact: 1 };
     }
-    RGFYRegexBuilder.prototype.startGroup = function (options) {
-        this.groupParents.push(new RGFYGroupBuilder(this, this.groupParents.length + 1, __assign({
-            ref: (this.groupParents.length - 1).toString(),
-        }, (options !== null && options !== void 0 ? options : {}))));
+    RGFYBuilder.prototype.startGroup = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        var opts = {};
+        if (args[0] && Object.values(RGFYRegularOccurences).includes(args[0])) {
+            opts.occurence = args[0];
+        }
+        else if (args[0] && typeof args[0] === 'string') {
+            opts.ref = args[0];
+        }
+        if (args[1] && Object.values(RGFYRegularOccurences).includes(args[1])) {
+            opts.occurence = args[1];
+        }
+        if (!opts.ref) {
+            opts.ref = (this.groupParents.length + 1).toString();
+        }
+        this.groupParents.push(new RGFYGroupBuilder(this, this.groupParents.length + 1, opts));
         return this.groupParents[this.groupParents.length - 1];
     };
-    RGFYRegexBuilder.prototype.endGroup = function () {
+    RGFYBuilder.prototype.endGroup = function () {
         throw 'Do not use on root builder';
     };
-    RGFYRegexBuilder.prototype.end = function (options) {
+    RGFYBuilder.prototype.end = function (options) {
         if (options === void 0) { options = { strict: false }; }
         if (this.options.startStrict) {
             this.regexp += '^';
@@ -143,9 +164,9 @@ var RGFYRegexBuilder = /** @class */ (function () {
         this.regexp += getGroupParentsRegexp(this.groupParents, 0);
         return new RegExp(this.regexp + (options.strict ? '$' : ''), "" + (this.options.global ? 'g' : '') + (this.options.caseInsensitive ? 'i' : ''));
     };
-    return RGFYRegexBuilder;
+    return RGFYBuilder;
 }());
-exports.default = RGFYRegexBuilder;
+exports.default = RGFYBuilder;
 var parseOccurence = function (occurence) {
     if (Object.values(RGFYRegularOccurences).includes(occurence)) {
         return occurence;

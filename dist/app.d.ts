@@ -3,7 +3,7 @@ export declare enum RGFYRegularOccurences {
     ONE_OR_MORE = "+",
     ZERO_OR_ONE = "?"
 }
-export declare enum RegexBuilderEscapedCharacters {
+export declare enum RGFYEscapedCharacters {
     DOT = "\\.",
     BACKSLASH = "\\",
     STAR = "*",
@@ -20,8 +20,6 @@ export interface RGFYOccurenceBound {
 export interface RGFYGroupBuilderOptions {
     occurence?: RGFYRegularOccurences | RGFYOccurenceBound;
     ref?: string;
-    backRef?: string;
-    or?: boolean;
 }
 export interface RGFYGroupParent {
     regexp?: string;
@@ -29,7 +27,11 @@ export interface RGFYGroupParent {
     backRef?: string;
     or?: boolean;
     occurence: RGFYRegularOccurences | RGFYOccurenceBound;
-    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    startGroup(): RGFYGroupBuilder;
+    startGroup(ref: string): RGFYGroupBuilder;
+    startGroup(occurence: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    startGroup(ref: string, occurence: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    startGroup(...args: any): RGFYGroupBuilder;
     endGroup(): RGFYGroupParent;
     end(options?: {
         strict?: boolean;
@@ -41,11 +43,16 @@ export declare class RGFYGroupBuilder implements RGFYGroupParent {
     regexp: string;
     readonly ref: string;
     backRef: string;
-    readonly or: boolean;
+    or: boolean;
     readonly occurence: RGFYRegularOccurences | RGFYOccurenceBound;
     private groupParents;
     constructor(groupParent: RGFYGroupParent, groupOffset: number, options: RGFYGroupBuilderOptions);
-    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    startGroup(): RGFYGroupBuilder;
+    startGroup(ref: string, occurence: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    startGroup(occurence: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    startGroup(ref: string): RGFYGroupBuilder;
+    thisOneOrNextOne(): RGFYGroupBuilder;
+    backReference(ref: string): RGFYGroupBuilder;
     expression(expression: string, occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
     word(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
     notWord(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
@@ -55,7 +62,6 @@ export declare class RGFYGroupBuilder implements RGFYGroupParent {
     notWhiteSpace(occurence?: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
     anyOf(...candidates: string[]): RGFYGroupBuilder;
     notIn(...excluded: string[]): RGFYGroupBuilder;
-    backReference(ref: string): RGFYGroupBuilder;
     charBetween(lowerChar: string, upperChar: string): RGFYGroupBuilder;
     endGroup(): RGFYGroupParent;
     end(): RegExp;
@@ -65,13 +71,16 @@ export interface RGFYBuilderOptions {
     caseInsensitive?: boolean;
     startStrict?: boolean;
 }
-export default class RGFYRegexBuilder {
+export default class RGFYBuilder implements RGFYGroupParent {
     private readonly options;
     regexp: string;
     private groupParents;
     readonly occurence: RGFYOccurenceBound;
     constructor(options?: RGFYBuilderOptions);
-    startGroup(options?: RGFYGroupBuilderOptions): RGFYGroupBuilder;
+    startGroup(): RGFYGroupBuilder;
+    startGroup(ref: string, occurence: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    startGroup(occurence: RGFYRegularOccurences | RGFYOccurenceBound): RGFYGroupBuilder;
+    startGroup(ref: string): RGFYGroupBuilder;
     endGroup(): RGFYGroupParent;
     end(options?: {
         strict?: boolean;
