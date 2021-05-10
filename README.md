@@ -87,3 +87,54 @@ npm i regexfy
         expect(regexp.test('JohnDoe')).toBe(false);
         expect(regexp.test('John doe')).toBe(false);
         expect(regexp.test('john Doe')).toBe(false);
+        
+### Phone number
+
+       const regexp = new RGFYBuilder({
+            startStrict: true,
+        })
+            .startGroup()
+            .expression(
+                RGFYEscapedCharacters.OPEN_PARENTHESES,
+                RGFYRegularOccurences.ZERO_OR_ONE
+            )
+            .digit({ exact: 3 })
+            .expression(
+                RGFYEscapedCharacters.CLOSE_PARENTHESES,
+                RGFYRegularOccurences.ZERO_OR_ONE
+            )
+            .endGroup()
+            .startGroup('dashFormat')
+            .startGroup()
+            .thisOneOrNextOne()
+            .expression('-')
+            .endGroup()
+            .startGroup()
+            .thisOneOrNextOne()
+            .expression('.')
+            .endGroup()
+            .startGroup()
+            .expression(RGFYEscapedCharacters.WHITE_SPACE)
+            .endGroup()
+            .endGroup()
+            .startGroup()
+            .digit({ exact: 3 })
+            .endGroup()
+            .startGroup()
+            .backReference('dashFormat')
+            .endGroup()
+            .startGroup()
+            .digit({ exact: 4 })
+            .endGroup()
+            .end({ strict: true });
+
+        expect(regexp.test('999-123-1234')).toBe(true);
+        expect(regexp.test('(999)-123-1234')).toBe(true);
+        expect(regexp.test('999.123.1234')).toBe(true);
+        expect(regexp.test('(999).123.1234')).toBe(true);
+        expect(regexp.test('999 123 1234')).toBe(true);
+        expect(regexp.test('(999) 123 1234')).toBe(true);
+
+        expect(regexp.test('999-123.1234')).toBe(false);
+        expect(regexp.test('999 123-1234')).toBe(false);
+        expect(regexp.test('999.123 1234')).toBe(false);
