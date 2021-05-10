@@ -34,7 +34,6 @@ npm i regexfy
 
 ### Website url
 
-       test('website url', () => {
         const regexp = new RGFYBuilder({ startStrict: true })
             .startGroup(RGFYRegularOccurences.ZERO_OR_ONE)
             .startGroup()
